@@ -23,9 +23,11 @@ and the other will hold your patched recovery image, and a version of it that yo
 > and *recovery.img.lz4 or recovery.img.* Personally, I unzipped the AP archive of a stock rom and got my recovery image from that.
 > Also, patcher-minimal has a bunch of workarounds for the workflow, so I'm not sure how good of an idea it'd be to run that instead of patcher locally.
 
-If you have those, then clone the repository, and move your recovery image to it.
+If you have those, then clone the repository.
 ```bash
-git clone https://github.com/mlm-games/fastboot-patcher.git && mv recovery.img.lz4 ./fastboot-patcher/ && cd fastboot-patcher
+git clone https://github.com/mlm-games/fastboot-patcher.git && cd fastboot-patcher
 ```
+Move the recovery image to the folder where the 'patcher' script is present.
+
 Then, simply run the script with `./patcher` and wait for it to finish, it shouldn't take longer than a minute.  
 You'll find the original recovery image and 2 new images *(.img and .tar.md5 for odin)* in the top directory if successful.
