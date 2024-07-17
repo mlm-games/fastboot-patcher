@@ -1,5 +1,5 @@
 ## `fastboot-patcher`
-> This repository is basically an updated version of a script which is an updated version of [Johx22/Patch-Recovery](https://github.com/Johx22/Patch-recovery)  
+> This repository is basically an updated version of a script which is also an updated version of [Johx22/Patch-Recovery](https://github.com/Johx22/Patch-recovery)  
 > Which is then based off of this script: [phhusson/samsung-galaxy-a51-gsi-boot](https://github.com/phhusson/samsung-galaxy-a51-gsi-boot)  
 > the scripts have been revamped, etc.  
 > All credit still goes to them.
