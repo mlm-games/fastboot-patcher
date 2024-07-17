@@ -2,37 +2,16 @@
 
 #####=============== SMALLRAT TOOLBOX ===============#####
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
-set -e  # Exit immediately if a command exits with a non-zero status.
-trap 'echo "Error occurred. Exiting."; exit 1' ERR
-
-# Define variables for common paths and commands
-csd=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-MAGISKBOOT="$csd/magiskboot"
-AVBTOOL="python3 $csd/avbtool"
-log_file="$csd/patcher.log"
-
-# Color definitions
-normal=$(tput sgr0)
-bold=$(tput bold)
-red=$(tput setaf 1)
-green=$(tput setaf 2)
-yellow=$(tput setaf 3)
-
-# Function definitions
 function message() {
    case $1 in
-   "error") echo "${bold}${red}[patcher.sh](error) => {$2}${normal}" | tee -a "$log_file";;
-   "warning") echo "${bold}${yellow}[patcher.sh](warning) => {$2}${normal}" | tee -a "$log_file";;
-   "success") echo "${bold}${green}[patcher.sh](success) -> [$2]${normal}" | tee -a "$log_file";;
-   "info") echo "[patcher.sh](info) -> [$2]" | tee -a "$log_file";;
-   *) return 1;;
+   "error") echo "${bold}${red}[patcher.sh](error) => {$2}${normal}" ;;
+   "warning") echo "${bold}${yellow}[patcher.sh](warning) => {$2}${normal}" ;;
+   "success") echo "${bold}${green}[patcher.sh](success) -> [$2]${normal}" ;;
+   "info") echo "[patcher.sh](info) -> [$2]" ;;
+   *) return 1 ;;
    esac
-}
-
-function log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" | tee -a "$log_file"
 }
 
 function existance() {
@@ -43,72 +22,39 @@ function existance() {
    fi
 }
 
-function run_magiskboot() {
-    $MAGISKBOOT "$@" || { message error "magiskboot command failed: $*"; exit 1; }
-}
+csd=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 
-function cleanup() {
-    message info "Cleaning up..."
-    rm -f header.img raw.img
-    rm -rf "$csd/fragments"
-    rm -f "$csd/keys/phh.pem"
-}
-
-function show_help() {
-    echo "Usage: $0 [options]"
-    echo "Options:"
-    echo "  -h    Show this help message"
-    echo "  -v    Show version"
-    echo "  -i    Specify input file (default: recovery.img or recovery.img.lz4)"
-    echo "  -o    Specify output file (default: output.tar)"
-}
-
-# Parse command line options
-input_file=""
-output_file="$csd/output.tar"
-verbose=false
-
-while getopts "hvi:o:" opt; do
-  case $opt in
-    h) show_help; exit 0 ;;
-    v) echo "Version $VERSION"; exit 0 ;;
-    i) input_file="$OPTARG" ;;
-    o) output_file="$OPTARG" ;;
-    *) echo "Invalid option: -$OPTARG" >&2; show_help; exit 1 ;;
-  esac
-done
+# Color definitions
+normal=$(tput sgr0)
+bold=$(tput bold)
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+yellow=$(tput setaf 3)
 
 # Main script
-trap cleanup EXIT
-
-log "Starting patcher script version $VERSION"
-
-# Handle input file
-if [ -z "$input_file" ]; then
-    existance "$csd/recovery.img.lz4" input_file="$csd/recovery.img.lz4" input_file="$csd/recovery.img"
-else
-    existance "$input_file" : "message error 'Specified input file not found'; exit 1"
-fi
+set -e
+trap 'message error "An error occurred. Exiting."; exit 1' ERR
 
 # Unzip or rename if necessary
-if [[ "$input_file" == *.lz4 ]]; then
-    message info "Found lz4-zipped image! Unzipping..."
-    lz4 -B6 --content-size -f "$input_file" || { message error "Failed to unzip input file"; exit 1; }
-    mv "./recovery.img" "./raw.img" || { message error "Failed to rename recovery.img to raw.img"; exit 1; }
-    message success "Unzipped to raw.img!"
-else
-    cp "$input_file" "$csd/raw.img" || { message error "Failed to copy input file to raw.img"; exit 1; }
-    message success "Found unzipped image!"
+existance "$csd/recovery.img.lz4" : :
+if [ $found == true ]; then
+   message info "Found lz4-zipped image! Unzipping..."
+   lz4 -B6 --content-size -f "$csd/recovery.img.lz4" && mv ./recovery.img ./raw.img &&
+   message success "Unzipped to raw.img!"
+else 
+   existance "$csd/recovery.img" : :
+   if [ $found == true ]; then
+      mv "$csd/recovery.img" "$csd/raw.img" &&
+      message success "Found unzipped image!"
+   else 
+      message error "No image to patch found. Please place recovery.img.lz4 or recovery.img in folder" && exit 1
+   fi
 fi
 
 # Edit raw image
 message info "Editing image..."
 off=$(grep -ab -o SEANDROIDENFORCE raw.img | tail -n 1 | cut -d : -f 1)
-if [ -z "$off" ]; then
-    message error "Failed to find SEANDROIDENFORCE in image"
-    exit 1
-fi
-dd if=raw.img of=header.img bs=4k count="$off" iflag=count_bytes || { message error "Failed to create header.img"; exit 1; }
+dd if=raw.img of=header.img bs=4k count="$off" iflag=count_bytes &&
 message success "Made edit to image!"
 
 # Make key/signature
@@ -118,14 +64,14 @@ existance "$csd/keys/phh.pem" : "openssl genrsa -f4 -out $csd/keys/phh.pem 4096 
 
 # Fragment the edited image
 existance "$csd/fragments" : "mkdir $csd/fragments"
-cd "$csd/fragments" || { message error "Failed to change to fragments directory"; exit 1; }
+cd fragments || exit
 message warning "Fragmenting image for patching!"
-run_magiskboot unpack "$csd/header.img"
-run_magiskboot cpio ramdisk.cpio extract
-existance "$csd/fragments/system/bin/recovery" "message success 'Successfully fragmented image!'" "message error 'Fragmentation failed!'; exit 1"
+"$csd/magiskboot" unpack "$csd/header.img" &&
+"$csd/magiskboot" cpio ramdisk.cpio extract &&
+existance "$csd/fragments/system/bin/recovery" "message success 'Successfully fragmented image!'" "message error 'Fragmentation failed!' && exit 1"
 
 # Patch the fragmented image
-message warning "Patching fragments"
+message warning "Patching fragments (16)"
 
 patches=(
     "e10313aaf40300aa6ecc009420010034 e10313aaf40300aa6ecc0094"
@@ -146,30 +92,22 @@ patches=(
 )
 
 for ((i=0; i<${#patches[@]}; i++)); do
-    run_magiskboot hexpatch system/bin/recovery ${patches[$i]}
-    message success "Finished patch $((i+1))"
+    if "$csd/magiskboot" hexpatch system/bin/recovery ${patches[$i]}; then
+        message success "Finished patch $((i+1))"
+    else
+        message warning "Patch $((i+1)) did not apply, continuing..."
+    fi
 done
 
-run_magiskboot cpio ramdisk.cpio 'add 0755 system/bin/recovery system/bin/recovery'
+"$csd/magiskboot" cpio ramdisk.cpio 'add 0755 system/bin/recovery system/bin/recovery' &&
 message success "Successfully finished patch to fragmented image!"
 
 # Reassemble fragmented image
-message warning "Attempting to defragment image..."
-run_magiskboot repack "$csd/header.img" "$csd/output.img"
-existance "$csd/output.img" "message success 'Assembled output.img!'; cd $csd" "message error 'Failed to assemble image!'; exit 1"
+message warning "Attempting to defragment image! If your image is corrupted, this may not end well..."
+"$csd/magiskboot" repack "$csd/header.img" "$csd/output.img"
+existance "$csd/output.img" "message success 'Assembled output.img!' && cd $csd" "message error 'Failed to assemble image!' && exit 1"
 
 # Sign patched image with keyfile
 message info "Extracting public key to phh.pub.bin..."
-$AVBTOOL extract_public_key --key "$csd/keys/phh.pem" --output "$csd/keys/phh.pub.bin" || { message error "Failed to extract public key"; exit 1; }
-
-message info "Signing patched image with key..."
-$AVBTOOL add_hash_footer --image "$csd/output.img" --partition_name recovery --partition_size "$(wc -c < "$csd/raw.img")" --key "$csd/keys/phh.pem" --algorithm SHA256_RSA4096 || { message error "Failed to sign image"; exit 1; }
-message success "Signed image successfully!"
-
-# Package image for use in Odin
-message info "Packaging image for Odin..."
-tar -cvf "$output_file" "$csd/output.img" || { message error "Failed to create tar file"; exit 1; }
-message success "Successfully packaged output.img -> $output_file"
-
-message success "Enjoy! Hope what you're trying to do works."
-log "Patcher script completed successfully"
+python3 "$csd/avbtool" extract_public_key --key "$csd/keys/phh.pem" --output "$csd/keys/phh.pub.bin" &&
+message info "Signing patched image
