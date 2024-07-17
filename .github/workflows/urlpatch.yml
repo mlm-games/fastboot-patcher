@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       image_url:
-        description: 'Recovery Image URL'
+        description: 'Recovery Image URL (supports .img or .img.lz4)'
         default: 'https://transfer.sh/<file-id>/<file>.img'
         required: true
         type: string
@@ -23,7 +23,16 @@ jobs:
          
     - name: Download recovery image from URL
       run: |
-         wget ${{github.event.inputs.image_url}}
+         wget ${{github.event.inputs.image_url}} -O recovery_image
+
+    - name: Process recovery image
+      run: |
+         if file recovery_image | grep -q "LZ4 compressed data"; then
+           lz4 -d recovery_image recovery.img
+           rm recovery_image
+         else
+           mv recovery_image recovery.img
+         fi
 
     - name: Start patching script
       run: |
