@@ -27,7 +27,7 @@ If you have those, then clone the repository.
 ```bash
 git clone https://github.com/mlm-games/fastboot-patcher.git && cd fastboot-patcher
 ```
-Move the recovery image to the folder where the 'patcher' script is present.
+Move the recovery image to the folder where the 'patcher' script is present (or to the fastboot-patcher folder at which the terminal is pointing at).
 
 Then, simply run the script with `./patcher` and wait for it to finish, it shouldn't take longer than a minute.  
 You'll find the original recovery image and 2 new images *(.img and .tar.md5 for odin)* in the top directory if successful.
