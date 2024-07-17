@@ -116,5 +116,8 @@ message success "Signed image successfully!"
 
 # Package image for use in Odin
 message info "Packaging image for Odin..."
-tar -cvf "$csd/output.tar" "$csd/output.img" &&
-message success "Successfully packaged output.img -> output.tar"
+mv "$csd/output.img" "$csd/recovery.img"
+tar -H ustar -c recovery.img > "$csd/output.tar"
+md5sum -t "$csd/output.tar" >> "$csd/output.tar"
+mv "$csd/output.tar" "$csd/output.tar.md5"
+message success "Successfully packaged recovery.img -> output.tar.md5"
