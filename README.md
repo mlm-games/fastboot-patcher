@@ -31,3 +31,52 @@ Move the recovery image to the folder where the 'patcher' script is present (or 
 
 Then, simply run the script with `./patcher` and wait for it to finish, it shouldn't take longer than a minute.  
 You'll find the original recovery image and 2 new images *(.img and .tar.md5 for odin)* in the top directory if successful.
+
+
+To verify the integrity of the image using avbtool, you can add the following command after the `add_hash_footer` step:
+
+```bash
+python3 "$csd/avbtool" verify_image --image "$csd/output.img" --key "$csd/keys/phh.pem"
+```
+
+This command will verify that the image has been properly signed and that its integrity is intact according to the AVB (Android Verified Boot) standards.
+
+
+
+# Fastboot Patcher (kinda noob friendly)
+
+This script patches recovery images to enable fastboot functionality on certain Android devices.
+
+## Prerequisites
+
+- Bash shell
+- Python 3
+- OpenSSL
+- LZ4 (for compressed images)
+- Magiskboot (included)
+- AVBTool (included)
+
+## Usage
+
+1. Place your `recovery.img` or `recovery.img.lz4` in the same directory as the script.
+2. Run the script:
+   ```
+   ./patcher.sh
+   ```
+3. The script will produce two files:
+   - `output.img`: The patched recovery image
+   - `output.tar`: Packaged image for use with Odin
+
+## Verification
+
+After patching, the script will automatically verify the integrity of the image. If you want to manually verify, use:
+
+```
+python3 avbtool verify_image --image output.img --key keys/phh.pem
+```
+
+## Troubleshooting
+
+- If fastboot commands fail after flashing the patched image, try re-running the script and pay attention to any warnings or errors.
+- Ensure you're using the correct version of the script for your device and Android version.
+- If issues persist, check the device-specific forums for any additional steps or modifications needed.
